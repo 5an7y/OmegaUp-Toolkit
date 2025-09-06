@@ -2,6 +2,7 @@ import argparse
 import os
 import pathlib
 import subprocess
+import json
 from tqdm import tqdm
 
 # Initialize parser
@@ -13,6 +14,16 @@ parser.add_argument('--use_solution', action='store_true', help = "Use this flag
 
 # Read arguments from command line
 args = parser.parse_args()
+
+# Read local configuration if it exists
+config_path = pathlib.Path(__file__).parent / "local_config.json"
+if config_path.exists():
+    with open(config_path, "r") as f:
+        config = json.load(f)
+    cpp_compiler = config.get("cpp_compiler", "g++")
+    cpp_flags = config.get("cpp_flags", "-std=c++20")
+else:
+    raise FileNotFoundError(f"Local configuration file not found: {config_path}")
 
 path = args.path
 gen_path = path/"case_generator.cpp"
@@ -34,10 +45,10 @@ if args.use_solution:
     if not os.path.isfile(solution_path):
         print(f"Didn't found the solution {solution_path}")
         exit()
-    subprocess.run(f"g++ {solution_path} -std=c++20 -o {sol_exe_path}", check=True)
+    subprocess.run(f"{cpp_compiler} {solution_path} {cpp_flags} -o {sol_exe_path}", check=True)
 
-# Compile the generator.cpp and parse the cases.arg
-subprocess.run(f"g++ {gen_path} -I ./Libs -std=c++20 -o {exe_path}", check=True)
+# Compile generator.cpp and parse cases.arg
+subprocess.run(f"{cpp_compiler} {gen_path} -I ./Libs {cpp_flags} -o {exe_path}", check=True)
 num_lines = sum(1 for line in open(args_path))
 f = open(args_path, "r")
 errors = []
