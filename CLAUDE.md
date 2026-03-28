@@ -1,105 +1,83 @@
-# CLAUDE.md — Guía de conocimiento para la IA
+# CLAUDE.md — AI Knowledge Guide
 
-Este archivo es leído automáticamente por Claude Code al inicio de cada conversación. Contiene todo el conocimiento acumulado sobre este proyecto: convenciones, flujos de trabajo, decisiones de diseño, y ejemplos. **Debe mantenerse vivo:** cada vez que aprendamos algo nuevo relevante sobre cómo crear o mejorar problemas, agrégalo aquí.
-
----
-
-## Contexto del proyecto
-
-Este repositorio es una herramienta para crear problemas de programación competitiva para la **Olimpiada Mexicana de Informática en Yucatán (OMI Yucatán)**. Los problemas se suben a la plataforma [OmegaUp](https://omegaup.com), que tiene un formato específico. Las clases de la olimpiada usan estos problemas para entrenar a los estudiantes.
+This file is automatically read by Claude Code at the start of each conversation. It contains everything needed to use this toolkit effectively: conventions, workflows, design decisions, and examples. **Keep it alive:** update it whenever you learn something new relevant to creating or improving problems.
 
 ---
 
-## Estructura del repositorio
+## Project Overview
+
+**OmegaUp-Toolkit** is a set of tools for creating competitive programming problems compatible with the [OmegaUp](https://omegaup.com) judge platform. It provides:
+
+- Python scripts to scaffold new problems, generate test cases, and test solutions
+- C++ libraries for writing case generators (`Libs/`)
+- Problem templates (`Examples/`)
+
+This toolkit is platform-agnostic — use it for any contest, training program, or problem set that targets OmegaUp.
+
+---
+
+## Repository Structure
 
 ```
-CPProblemGenerator/
-├── CreateProblem.py       # Crea la estructura de un nuevo problema desde el template
-├── GenerateCases.py       # Compila y ejecuta el generador de casos
-├── TestCases.py           # Compila y prueba soluciones contra los casos generados
-├── Libs/                  # Librerías C++ para generadores
-│   ├── Generator.hpp      # Maneja entrada/salida de archivos de casos
-│   ├── Random.hpp         # Utilidades de generación aleatoria
-│   ├── Background.hpp     # Segment tree interno (usado por Random.hpp)
-│   └── Constants.hpp      # Constantes
-├── Examples/
-│   ├── Template/          # Template base para nuevos problemas
-│   └── InteractiveTemplate/  # Template para problemas interactivos
-├── Problems/              # Todos los problemas, organizados por fases y temas
-│   ├── 01_IntroduccionProgramacion/
-│   │   ├── 01_Condicionales/
-│   │   ├── 02_Ciclos/
-│   │   ├── 03_Arreglos/
-│   │   └── 04_Strings/
-│   ├── 02_PrimerosPasosAlgoritmia/
-│   │   ├── 01_Matematicas/
-│   │   ├── 02_Greedy/
-│   │   └── 03_TecnicasBasicas/    # Binary search, two pointers, sliding window, cubeta
-│   ├── 03_AlgoritmosEstructurasDatos/
-│   │   ├── 01_EstructurasDatos/   # Stack, queue, deque, monotone stack (manual)
-│   │   ├── 02_TeoriaNumeros/
-│   │   ├── 03_ObjetosLibreria/    # STL: map, set, priority_queue, etc.
-│   │   ├── 04_TecnicasBasicasII/  # Prefix arrays, update points, sweep line
-│   │   └── 05_Ordenamientos/
-│   ├── 04_ProgramacionCompetitiva/
-│   │   ├── 01_Backtracking/
-│   │   ├── 02_Interactivos/
-│   │   ├── 03_Grafos/             # BFS, DFS
-│   │   └── 04_DP/
-│   ├── 05_TemasEspecializados/
-│   │   ├── 01_Combinatoria/
-│   │   ├── 02_AlgoritmosGrafos/   # Dijkstra, etc.
-│   │   ├── 03_SegmentTree/
-│   │   ├── 04_AlgoritmosArboles/
-│   │   └── 05_DivideYVenceras/
-│   └── _Recursos/                 # Editoriales, PDFs, imágenes de concursos
+OmegaUp-Toolkit/
+├── CreateProblem.py       # Creates a new problem from the template
+├── GenerateCases.py       # Compiles and runs the case generator
+├── TestCases.py           # Compiles and tests solutions against cases
+├── Libs/                  # C++ libraries for case generators
+│   ├── Generator.hpp      # File I/O for case generator
+│   ├── Random.hpp         # Random generation utilities
+│   ├── Background.hpp     # Segment tree (internal dependency)
+│   └── Constants.hpp      # Constants
+└── Examples/
+    ├── Template/          # Base template for new problems
+    ├── InteractiveTemplate/  # Template for interactive problems
+    └── SimpleSum/         # Worked example
 ```
 
 ---
 
-## Estructura de un problema
+## Problem Structure
 
-Cada problema es una carpeta con esta estructura:
+Each problem is a folder with this structure:
 
 ```
-MiProblema/
-├── case_generator.cpp     # Genera los casos de prueba
-├── cases.arg              # Argumentos para cada caso (uno por línea)
-├── cases/                 # Archivos .in y .out generados
+MyProblem/
+├── case_generator.cpp     # Generates test cases
+├── cases.arg              # Arguments for each case (one per line)
+├── cases/                 # Generated .in and .out files
 │   ├── c1.in
 │   ├── c1.out
 │   └── ...
 ├── solution/
-│   └── solution.cpp       # Solución de referencia (puede haber múltiples .cpp)
+│   └── solution.cpp       # Reference solution (can have multiple .cpp files)
 ├── statements/
-│   └── es.markdown        # Enunciado del problema en español (formato OmegaUp)
-├── testplan               # (opcional) Define grupos y pesos de casos
-└── validator.cpp          # (opcional) Validador personalizado de salida
+│   └── es.markdown        # Problem statement in OmegaUp's markdown format
+├── testplan               # (optional) Groups and weights for scoring
+└── validator.cpp          # (optional) Custom output validator
 ```
 
 ---
 
-## Formato del enunciado: `statements/es.markdown`
+## Statement Format: `statements/es.markdown`
 
-OmegaUp usa un formato Markdown especial con secciones predefinidas. Las fórmulas matemáticas van entre `$...$` (LaTeX inline).
+OmegaUp uses a special Markdown format with predefined sections. Math formulas go between `$...$` (LaTeX inline).
 
 ```markdown
 # Historia
 
-Contexto narrativo opcional que ambienta el problema (puede omitirse).
+Optional narrative context (can be omitted).
 
 # Problema
 
-Descripción concisa y precisa del problema a resolver.
+Concise, precise problem description.
 
 # Entrada
 
-Descripción de la entrada. Ejemplo:
-Se te dará un entero $N$ en la primera línea, seguido de $N$ enteros.
+Input description.
 
 # Salida
 
-Descripción exacta de qué debe imprimir el programa.
+Exact description of what the program must print.
 
 # Ejemplos
 
@@ -109,7 +87,7 @@ Descripción exacta de qué debe imprimir el programa.
 ||output
 4
 ||description
-Descripción opcional del caso de ejemplo.
+Optional description of this example.
 ||input
 3
 1 2 3
@@ -126,18 +104,17 @@ Descripción opcional del caso de ejemplo.
 - $1 \leq N \leq 100$
 ```
 
-**Reglas importantes del formato:**
-- `||input`, `||output`, `||description` y `||end` son marcadores especiales de OmegaUp.
-- `||description` es opcional por ejemplo.
-- Siempre terminar la sección de ejemplos con `||end`.
-- Las fórmulas matemáticas usan sintaxis LaTeX: `$O(N \log N)$`, `$10^9$`, etc.
-- La sección `# Historia` es opcional pero recomendada para dar contexto a los estudiantes.
+**Important rules:**
+- `||input`, `||output`, `||description`, `||end` are OmegaUp special markers.
+- `||description` is optional per example.
+- Always end the examples section with `||end`.
+- Math formulas use LaTeX syntax: `$O(N \log N)$`, `$10^9$`, etc.
 
 ---
 
-## Formato de `cases.arg`
+## `cases.arg` Format
 
-Cada línea define un caso de prueba. El primer token es el **nombre del caso** y el resto son **argumentos** que el generador puede leer.
+Each line defines one test case. The first token is the **case name**, the rest are **arguments** the generator can read.
 
 ```
 c1 100
@@ -145,52 +122,52 @@ c2 1000
 c3 100000
 ```
 
-El generador recibe el nombre del caso como `argv[1]` (usado por `Generator::init_generator`) y los argumentos adicionales quedan disponibles en `Generator::arguments`. Los nombres de los casos determinan los nombres de los archivos `.in` y `.out`.
+The generator receives the case name as `argv[1]` (used by `Generator::init_generator`) and additional arguments in `Generator::arguments`. Case names become the `.in` / `.out` file names.
 
-**Convención de nombres con grupos:** Si usas `testplan`, los casos se agrupan por el prefijo antes del punto:
+**Group convention:** If using `testplan`, cases are grouped by the prefix before the first dot:
 ```
-grupo1.c1 100
-grupo1.c2 500
-grupo2.c1 1000
+group1.c1 100
+group1.c2 500
+group2.c1 1000
 ```
-Esto crea dos grupos (`grupo1`, `grupo2`). Dentro de un grupo, **todos los casos deben ser AC** para obtener puntos del grupo.
+This creates two groups (`group1`, `group2`). Within a group, **all cases must be AC** to earn the group's points.
 
 ---
 
-## Formato de `testplan`
+## `testplan` Format
 
-Define el peso de cada caso para el puntaje. Si no existe, todos los casos valen igual.
+Defines the weight of each case for scoring. If absent, all cases are worth equal points.
 
 ```
 c1 10
 c2 10
 c3 20
-grupo1.c1 15
-grupo1.c2 15
-grupo2.c1 30
+group1.c1 15
+group1.c2 15
+group2.c1 30
 ```
 
-Se genera automáticamente con:
+Generate a skeleton with:
 ```bash
-py CreateProblem.py Problems/MiTema/MiProblema --testplan
+python CreateProblem.py path/to/MyProblem --testplan
 ```
-(Asigna peso 0 a todos; hay que ajustar manualmente los pesos.)
+(Assigns weight 0 to all cases; adjust manually.)
 
 ---
 
-## Librería `Generator.hpp`
+## `Generator.hpp` Library
 
-Provee tres streams para el `case_generator.cpp`:
+Provides three streams for use in `case_generator.cpp`:
 
-| Stream | Uso |
-|--------|-----|
-| `Generator::case_in` | Escribe la entrada del caso (archivo `.in`) |
-| `Generator::case_out` | Escribe la salida esperada del caso (archivo `.out`) |
-| `Generator::arguments` | Lee los argumentos del `cases.arg` |
+| Stream | Usage |
+|--------|-------|
+| `Generator::case_in` | Writes the case input (`.in` file) |
+| `Generator::case_out` | Writes the expected output (`.out` file) |
+| `Generator::arguments` | Reads arguments from `cases.arg` |
 
-**Siempre llamar primero:** `Generator::init_generator(argc, argv);`
+**Always call first:** `Generator::init_generator(argc, argv);`
 
-**Ejemplo completo:**
+**Complete example:**
 ```cpp
 #include "Generator.hpp"
 #include "Random.hpp"
@@ -207,9 +184,9 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < N; i++)
         Generator::case_in << vec[i] << " \n"[i == N-1];
 
-    // Si el output es simple, puedes calcularlo aquí también:
+    // If output is simple, compute it here:
     // Generator::case_out << answer;
-    // De lo contrario, usa --use_solution en GenerateCases.py
+    // Otherwise, use --use_solution in GenerateCases.py
 
     return 0;
 }
@@ -217,162 +194,139 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## Librería `Random.hpp`
+## `Random.hpp` Library
 
-Funciones disponibles (todas en el namespace `Random`):
+All functions are in the `Random` namespace:
 
 ```cpp
-// Número aleatorio en [a, b] (inclusive)
+// Single random number in [a, b] (inclusive)
 Random::rnd(a, b)
 
-// Vector de sz números aleatorios en [a, b]
+// Vector of sz random numbers in [a, b]
 Random::rnd(a, b, sz)
 
-// Vector de sz números ÚNICOS en [a, b]
+// Vector of sz UNIQUE random numbers in [a, b]
 Random::rnd_unique(a, b, sz)
 
-// Par ordenado (a1 <= a2) con valores en [a, b]
+// Ordered pair (a1 <= a2) with values in [a, b]
 Random::rnd_pair(a, b)
 
-// Vector de pares ordenados
+// Vector of ordered pairs
 Random::rnd_pair(a, b, sz)
 
-// Vector de sz números que suman exactamente `sum`
+// Vector of sz numbers that sum exactly to `sum`
 Random::rnd_nums_that_sum(sum, sz)
 Random::rnd_nums_that_sum(sum, sz, allow_zero=true)
 
-// Árbol aleatorio de N nodos, retorna lista de aristas
+// Random tree of N nodes, returns edge list
 Random::rnd_tree(N)
 
-// Bosque aleatorio de N nodos y `trees` árboles
+// Random forest of N nodes and `trees` trees
 Random::rnd_forest(N, trees)
 ```
 
-**Tipos:** Las funciones son templates, funcionan con `int`, `long long`, etc.
+**Types:** All functions are templates, work with `int`, `long long`, etc.
 
 ---
 
-## Scripts de Python
+## Python Scripts
 
-### `CreateProblem.py` — Crear un problema nuevo
+### `CreateProblem.py` — Create a new problem
 
 ```bash
-py CreateProblem.py Problems/MiTema/MiProblema
-py CreateProblem.py Problems/MiTema/MiProblema --validator   # incluye validator.cpp
-py CreateProblem.py Problems/MiTema/MiProblema --testplan    # genera testplan desde cases.arg
+python CreateProblem.py path/to/MyProblem
+python CreateProblem.py path/to/MyProblem --validator   # include validator.cpp
+python CreateProblem.py path/to/MyProblem --testplan    # generate testplan from cases.arg
 ```
 
-Copia la estructura de `Examples/Template/` al directorio indicado.
+Copies the `Examples/Template/` structure to the specified directory.
 
-### `GenerateCases.py` — Generar los casos
+### `GenerateCases.py` — Generate test cases
 
 ```bash
-py GenerateCases.py Problems/MiTema/MiProblema
-py GenerateCases.py Problems/MiTema/MiProblema --use_solution   # usa solution.cpp para generar .out
-py GenerateCases.py Problems/MiTema/MiProblema --stack 33554432  # stack más grande (32MB)
+python GenerateCases.py path/to/MyProblem
+python GenerateCases.py path/to/MyProblem --use_solution   # generate .out from solution.cpp
+python GenerateCases.py path/to/MyProblem --stack 33554432  # larger stack (32MB)
 ```
 
-- Compila `case_generator.cpp` con `g++ -std=c++20 -I ./Libs`
-- Lee `cases.arg` y ejecuta el generador para cada caso
-- Con `--use_solution`: compila `solution/solution.cpp` y la ejecuta sobre cada `.in` para generar los `.out`
-- **Nota:** El stack por defecto es 16MB (`16777216`). Para recursiones profundas usar `--stack 33554432`
+- Compiles `case_generator.cpp` with `g++ -std=c++20 -I ./Libs`
+- Reads `cases.arg` and runs the generator for each case
+- With `--use_solution`: compiles and runs `solution/solution.cpp` on each `.in` to generate `.out`
+- **Note:** Default stack is 16MB (`16777216`). For deep recursion use `--stack 33554432`
 
-### `TestCases.py` — Probar soluciones
+### `TestCases.py` — Test solutions
 
 ```bash
-py TestCases.py Problems/MiTema/MiProblema
-py TestCases.py Problems/MiTema/MiProblema --time_limit 2000         # límite de 2 segundos
-py TestCases.py Problems/MiTema/MiProblema --solutions sol1.cpp      # solo prueba sol1.cpp
-py TestCases.py Problems/MiTema/MiProblema --cases c1 c2 c5          # solo prueba esos casos
-py TestCases.py Problems/MiTema/MiProblema --validator               # usa validator.cpp
+python TestCases.py path/to/MyProblem
+python TestCases.py path/to/MyProblem --time_limit 2000         # 2-second limit
+python TestCases.py path/to/MyProblem --solutions sol1.cpp      # test only sol1.cpp
+python TestCases.py path/to/MyProblem --cases c1 c2 c5          # test only these cases
+python TestCases.py path/to/MyProblem --validator               # use validator.cpp
 ```
 
-Veredictos posibles:
-| Veredicto | Significado |
-|-----------|-------------|
-| AC | Aceptado |
-| WA | Respuesta incorrecta |
-| TLE | Tiempo límite excedido |
-| RTE | Error en ejecución |
-| PA | Aceptado parcialmente (solo con validador) |
+Verdicts:
+| Verdict | Meaning |
+|---------|---------|
+| AC | Accepted |
+| WA | Wrong Answer |
+| TLE | Time Limit Exceeded |
+| RTE | Runtime Error |
+| PA | Partially Accepted (validator only) |
 
 ---
 
-## Flujo de trabajo para crear un problema nuevo
+## Workflow for Creating a New Problem
 
-1. **Crear la estructura:**
+1. **Create the structure:**
    ```bash
-   py CreateProblem.py Problems/MiTema/NombreProblema
+   python CreateProblem.py path/to/MyProblem
    ```
 
-2. **Escribir el enunciado** en `statements/es.markdown` siguiendo el formato OmegaUp.
+2. **Write the statement** in `statements/es.markdown`.
 
-3. **Diseñar los casos** en `cases.arg`: nombres y parámetros de cada caso.
+3. **Design test cases** in `cases.arg`: names and parameters.
 
-4. **Implementar el generador** en `case_generator.cpp` usando `Generator.hpp` y `Random.hpp`.
+4. **Implement the generator** in `case_generator.cpp` using `Generator.hpp` and `Random.hpp`.
 
-5. **Implementar la solución** en `solution/solution.cpp`.
+5. **Implement the reference solution** in `solution/solution.cpp`.
 
-6. **Generar los casos:**
+6. **Generate cases:**
    ```bash
-   py GenerateCases.py Problems/MiTema/NombreProblema --use_solution
+   python GenerateCases.py path/to/MyProblem --use_solution
    ```
 
-7. **Verificar la solución:**
+7. **Verify the solution:**
    ```bash
-   py TestCases.py Problems/MiTema/NombreProblema
+   python TestCases.py path/to/MyProblem
    ```
 
-8. **(Opcional) Crear testplan** para puntaje por grupos:
+8. **(Optional) Create testplan** for group-based scoring:
    ```bash
-   py CreateProblem.py Problems/MiTema/NombreProblema --testplan
-   # Luego editar manualmente testplan para asignar pesos
+   python CreateProblem.py path/to/MyProblem --testplan
+   # Edit testplan to assign weights
    ```
 
 ---
 
-## Convenciones del proyecto
+## Local Configuration
 
-- Los problemas se nombran en `CamelCase` descriptivo, en español.
-- Los casos simples se nombran `c1, c2, ...`; los casos con grupos usan `grupo.caso` o `subgrupo.caso`.
-- Los argumentos en `cases.arg` normalmente incluyen el tamaño del input (N) u otros parámetros de dificultad.
-- Los valores de borde siempre deben incluirse como casos: mínimo, máximo, casos especiales.
-- La solución de referencia va siempre en `solution/solution.cpp`. Se pueden incluir soluciones alternativas (bruteforce, etc.) con otros nombres para comparar.
-- Los recursos de concursos (editoriales, PDFs, imágenes) van en `Problems/_Recursos/`.
+Create a `local_config.json` at the toolkit root to override the compiler:
 
-### Clasificación de problemas por tema
+```json
+{
+    "cpp_compiler": "/path/to/g++",
+    "cpp_flags": "-std=c++20 -O2"
+}
+```
 
-Los problemas se clasifican por el **tema máximo** requerido para obtener el 100% de los puntos. La clasificación depende de los **límites reales del problema**, no solo del nombre del algoritmo:
-
-- **Regla clave:** si la solución de fuerza bruta (O(N²), O(N·Q), etc.) entra dentro del tiempo límite dado los constraints del problema, el problema se clasifica en la categoría más básica que permita esa solución.
-  - Ejemplo: `ActualizacionRangos` con N,Q ≤ 100 → O(N·Q) = 10,000 ops → cabe en 1 seg → **Arreglos**, no TecnicasBasicasII.
-  - Ejemplo: `InterseccionArreglos` con N,Q ≤ 100 → brute force cabe → **Arreglos**.
-  - Si los mismos problemas tuvieran N,Q ≤ 10⁵, entonces sí irían en TecnicasBasicasII.
-- Un problema puede requerir múltiples temas; siempre se clasifica por el más avanzado necesario para el 100%.
-- La referencia de fases/temas está en Notion: "Temas OMI Yucatan".
+This file is gitignored.
 
 ---
 
-## Diseño pedagógico de problemas
+## Keeping This File Updated
 
-Los problemas están pensados para estudiantes de preparatoria/secundaria que aprenden programación competitiva. Algunas guías:
-
-- **Historia:** Dar contexto local o divertido (referencias a Yucatán, nombres conocidos) hace los problemas más accesibles.
-- **Subtareas:** Diseñar casos que permitan soluciones parciales (fuerza bruta para 20%, solución completa para 100%) ayuda a estudiantes de todos los niveles.
-- **Claridad:** El enunciado debe ser preciso y sin ambigüedades. Los ejemplos deben cubrir casos representativos.
-- **Casos borde:** Siempre incluir N=1, valores mínimos, valores máximos, y casos donde la respuesta es 0 o negativa si aplica.
-
----
-
-## Cómo mantener este archivo
-
-**Este archivo debe crecer con el tiempo.** Cada vez que:
-- Aprendamos un nuevo patrón para diseñar casos
-- Descubramos una convención nueva
-- Creemos una herramienta nueva
-- Encontremos un error común y su solución
-- Decidamos algo sobre el diseño pedagógico
-
-...debe agregarse aquí en la sección correspondiente. Si no existe sección adecuada, créala.
-
-El objetivo es que cualquier persona (o IA) que clone este repo y abra Claude Code tenga todo el contexto necesario para crear problemas de calidad sin necesidad de explicaciones adicionales.
+Update this file when:
+- A new pattern for designing cases is discovered
+- A new convention is established
+- A new tool or library is added
+- A common mistake and its fix are identified
