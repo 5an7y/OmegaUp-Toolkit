@@ -14,8 +14,7 @@ if config_path.exists():
     cpp_compiler = config.get("cpp_compiler", "g++")
     cpp_flags = config.get("cpp_flags", "-std=c++20")
 else:
-    cpp_compiler = "g++"
-    cpp_flags = "-std=c++20"
+    raise FileNotFoundError(f"Local configuration file not found: {config_path}")
 
 def solution_ok(c_path, case_name):
     case_out_path = f"{c_path}/{case_name}.out" 
