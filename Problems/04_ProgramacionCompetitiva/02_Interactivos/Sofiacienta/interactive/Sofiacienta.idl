@@ -1,0 +1,7 @@
+interface Main {
+	char MandarCabellero(int x);
+};
+
+interface Sofiacienta {
+	void EncontrarZapatillas(int N);
+};
