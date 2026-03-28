@@ -96,16 +96,21 @@ namespace Random {
     std::vector<std::pair<int, int>> rnd_tree(int N) {
         if(N == 1) return {};
 
-        auto parents = rnd(1, N-1, N);
-        std::vector<std::pair<int, int>> vec(N);
-        for (int i = 0; i < N; i++) {
-            parents[i] = (parents[i] + i) % N;
-            vec[i] = ( 
-                rnd(0, 1) ? std::make_pair(i, parents[i]) : std::make_pair(parents[i], i)
+        std::vector<int> parents(N);
+        for (int i = 1; i < N; i++) 
+            parents[i] = Random::rnd(0, i-1);
+        
+        std::vector<int> remapping(N);
+        std::iota(remapping.begin(), remapping.end(), 0);
+        std::random_shuffle(remapping.begin(), remapping.end());
+
+        std::vector<std::pair<int, int>> vec(N-1);
+        for (int i = 1; i < N; i++) {
+            parents[i] = remapping[parents[i]];
+            vec[i-1] = ( 
+                rnd(0, 1) ? std::make_pair(remapping[i], parents[i]) : std::make_pair(parents[i], remapping[i])
             );
         }
-        std::random_shuffle(vec.begin(), vec.end());
-        vec.pop_back();
         
         return vec;
     }

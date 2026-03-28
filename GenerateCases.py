@@ -10,11 +10,13 @@ parser = argparse.ArgumentParser(description = "Program to generate the cases of
 # Adding optional argument
 parser.add_argument('path', type=pathlib.Path, help = "Directory where the problem is")
 parser.add_argument('--use_solution', action='store_true', help = "Use this flag when creating your own case checker")
+parser.add_argument('--stack', type=int, default=16777216, help = "Size of the stack for the solution and generator")
 
 # Read arguments from command line
 args = parser.parse_args()
 
 path = args.path
+stack_size = args.stack
 gen_path = path/"case_generator.cpp"
 exe_path = path/"case_generator.exe"
 args_path = path/"cases.arg"
@@ -34,10 +36,10 @@ if args.use_solution:
     if not os.path.isfile(solution_path):
         print(f"Didn't found the solution {solution_path}")
         exit()
-    subprocess.run(f"g++ {solution_path} -std=c++20 -o {sol_exe_path}", check=True)
+    subprocess.run(f"g++ {solution_path} -std=c++20 -o {sol_exe_path} -Wl,--stack,{stack_size}", check=True)
 
 # Compile the generator.cpp and parse the cases.arg
-subprocess.run(f"g++ {gen_path} -I ./Libs -std=c++20 -o {exe_path}", check=True)
+subprocess.run(f"g++ {gen_path} -I ./Libs -std=c++20 -o {exe_path} -Wl,--stack,{stack_size}", check=True)
 num_lines = sum(1 for line in open(args_path))
 f = open(args_path, "r")
 errors = []
