@@ -1,0 +1,1 @@
+- https://tlx.toki.id/problems/osn-2023/2C.
