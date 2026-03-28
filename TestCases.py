@@ -4,6 +4,18 @@ import pathlib
 import subprocess
 import time
 import shutil
+import json
+
+# Read local configuration if it exists
+config_path = pathlib.Path(__file__).parent / "local_config.json"
+if config_path.exists():
+    with open(config_path, "r") as f:
+        config = json.load(f)
+    cpp_compiler = config.get("cpp_compiler", "g++")
+    cpp_flags = config.get("cpp_flags", "-std=c++20")
+else:
+    cpp_compiler = "g++"
+    cpp_flags = "-std=c++20"
 
 def solution_ok(c_path, case_name):
     case_out_path = f"{c_path}/{case_name}.out" 
@@ -92,7 +104,7 @@ def test_solution(solution, groups):
     sol_p = solutions_path / solution
     exe_p = solutions_path / (solution[:-4] + ".exe")
     try:
-        subprocess.run(f"g++ {sol_p} -std=c++20 -o {exe_p}", check=True)
+        subprocess.run(f"{cpp_compiler} {sol_p} {cpp_flags} -o {exe_p}", check=True)
     except :
         print(f"\t{FAIL_COLOR}COMPILATION ERROR{END_COLOR}")
         return 0
@@ -187,7 +199,7 @@ if validator:
     if not os.path.isfile(validator_path):
         print(f"Missing validator.cpp")
         exit()
-    subprocess.run(f"g++ {validator_path} -std=c++20 -o {validator_exe}", check=True)
+    subprocess.run(f"{cpp_compiler} {validator_path} {cpp_flags} -o {validator_exe}", check=True)
 
 testplan_detected = False
 testplan_path = path/"testplan"

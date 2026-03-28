@@ -1,0 +1,4 @@
+{
+    "cpp_compiler": "g++",
+    "cpp_flags": "-std=c++20"
+}
