@@ -6,7 +6,7 @@ _TOOLKIT = pathlib.Path(__file__).parent.parent
 
 _COMMANDS = {
     "create":   _TOOLKIT / "CreateProblem.py",
-    "generate": _TOOLKIT / "GenerateCases.py",
+    "generate-cases": _TOOLKIT / "GenerateCases.py",
     "test":     _TOOLKIT / "TestCases.py",
 }
 
@@ -14,14 +14,14 @@ _HELP = """\
 OmegaUp Toolkit — command-line interface
 
 Usage:
-  omegaup create   <path> [--yes] [--validator] [--testplan]
-  omegaup generate <path> [--use_solution] [--stack N]
-  omegaup test     <path> [--time_limit N] [--solutions ...] [--cases ...]
+  omegaup create         <path> [--yes] [--validator] [--testplan]
+  omegaup generate-cases <path> [--use_solution] [--stack N]
+  omegaup test           <path> [--time_limit N] [--solutions ...] [--cases ...]
 
 Commands:
-  create    Scaffold a new problem from the template
-  generate  Compile and run the case generator
-  test      Test solutions against generated cases
+  create          Scaffold a new problem from the template
+  generate-cases  Compile and run the case generator
+  test            Test solutions against generated cases
 
 Run 'omegaup <command> --help' for details on each command.
 """
