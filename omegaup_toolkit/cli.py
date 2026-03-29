@@ -1,14 +1,4 @@
 import sys
-import subprocess
-import pathlib
-
-_TOOLKIT = pathlib.Path(__file__).parent.parent
-
-_SCRIPT_COMMANDS = {
-    "create":         _TOOLKIT / "CreateProblem.py",
-    "generate-cases": _TOOLKIT / "GenerateCases.py",
-    "test":           _TOOLKIT / "TestCases.py",
-}
 
 _HELP = """\
 OmegaUp Toolkit — command-line interface
@@ -30,29 +20,36 @@ Commands:
 Run 'omegaup <command> --help' for details on each command.
 """
 
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(_HELP)
         sys.exit(0)
 
-    cmd = sys.argv[1]
+    cmd  = sys.argv[1]
+    argv = sys.argv[2:]
 
     if cmd == "login":
         from omegaup_toolkit.login import run_login
         run_login()
-        return
 
-    if cmd == "logout":
+    elif cmd == "logout":
         from omegaup_toolkit.login import run_logout
         run_logout()
-        return
 
-    if cmd not in _SCRIPT_COMMANDS:
+    elif cmd == "create":
+        from omegaup_toolkit.create import run
+        run(argv)
+
+    elif cmd == "generate-cases":
+        from omegaup_toolkit.generate import run
+        run(argv)
+
+    elif cmd == "test":
+        from omegaup_toolkit.test import run
+        run(argv)
+
+    else:
         print(f"Unknown command: '{cmd}'")
-        print(f"Available commands: login, logout, {', '.join(_SCRIPT_COMMANDS)}")
+        print("Available commands: login, logout, create, generate-cases, test")
         sys.exit(1)
-
-    result = subprocess.run(
-        [sys.executable, str(_SCRIPT_COMMANDS[cmd])] + sys.argv[2:]
-    )
-    sys.exit(result.returncode)
