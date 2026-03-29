@@ -7,10 +7,10 @@ name = "omegaup-toolkit"
 version = "0.1.0"
 description = "Toolkit for creating and testing competitive programming problems for OmegaUp"
 requires-python = ">=3.6"
-dependencies = ["tqdm"]
+dependencies = ["tqdm", "omegaup>=2.0.17"]
 
 [tool.setuptools.packages.find]
-include = ["omegaup*"]
+include = ["omegaup_toolkit*"]
 
 [project.scripts]
-omegaup = "omegaup.cli:main"
+omegaup = "omegaup_toolkit.cli:main"
