@@ -290,12 +290,21 @@ Create `local_config.json` in the toolkit root to override compiler settings:
 
 ---
 
-## Calling scripts directly
+## omegaup login / logout
 
-If you prefer not to install the package, the scripts also work directly — they resolve all paths relative to themselves:
+Authenticate with your OmegaUp account to enable publishing problems directly from the CLI.
 
 ```bash
-python3 /path/to/OmegaUp-Toolkit/CreateProblem.py MyProblem
-python3 /path/to/OmegaUp-Toolkit/GenerateCases.py MyProblem --use_solution
-python3 /path/to/OmegaUp-Toolkit/TestCases.py MyProblem
+omegaup login
+omegaup logout
 ```
+
+`omegaup login` will:
+1. Open (or print) the URL to create an API token on your OmegaUp profile
+2. Ask you to paste the token (hidden input — the token won't appear on screen)
+3. Validate it against the API and confirm your username
+4. Save it to `~/.config/omegaup/credentials.json`
+
+API tokens are created at: `https://omegaup.com/profile/#manage-api-tokens`
+
+> **Tip:** copy the 40-character hex value that appears *below* the token name, not the name itself.
