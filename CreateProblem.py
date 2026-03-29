@@ -4,7 +4,7 @@ import pathlib
 import shutil
 
 # Constants
-template_dir = pathlib.PurePath('Examples/Template')
+template_dir = pathlib.Path(__file__).parent / "Examples" / "Template"
 
 # Initialize parser
 parser = argparse.ArgumentParser(description = "Program to create a problem using this library")
@@ -46,8 +46,6 @@ for x in path.parts[:-1]:
             exit()
         if val == "N":
             exit()
-        else:
-            break
 
 shutil.copytree(template_dir, path)
 if not args.validator:

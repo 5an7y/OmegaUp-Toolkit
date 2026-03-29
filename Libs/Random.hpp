@@ -7,25 +7,23 @@
 
 namespace Random {
 
+    inline std::mt19937 rng(std::random_device{}());
+
     // Generates a random number between [a, b]. (inclusive)
     template <typename T>
     T rnd(T a, T b) {
-        std::random_device rd; 
-        std::mt19937 gen(rd());
         std::uniform_int_distribution<T> distrib(a, b);
-        return distrib(gen);
+        return distrib(rng);
     }
 
     // Generates a random vector filled with numbers between [a, b].
     template <typename T>
     std::vector<T> rnd(T a, T b, std::size_t sz) {
-        std::random_device rd; 
-        std::mt19937 gen(rd());
         std::uniform_int_distribution<T> distrib(a, b);
 
         std::vector<T> vec(sz);
         for (auto& el : vec)
-            el = distrib(gen);
+            el = distrib(rng);
         return vec;
     }
 
@@ -50,12 +48,10 @@ namespace Random {
     // Generates a random pair of numbers between [a, b].
     template <typename T>
     std::pair<T, T> rnd_pair(T a, T b) {
-        std::random_device rd; 
-        std::mt19937 gen(rd());
         std::uniform_int_distribution<T> distrib(a, b);
         T a1, a2;
-        a1 = distrib(gen);
-        a2 = distrib(gen);
+        a1 = distrib(rng);
+        a2 = distrib(rng);
         if (a1 > a2) std::swap(a1, a2);
         return {a1, a2};
     }
@@ -63,14 +59,12 @@ namespace Random {
     // Generates a vector filled with random pair of numbers between [a, b].
     template <typename T>
     std::vector<std::pair<T, T>> rnd_pair(T a, T b, std::size_t sz) {
-        std::random_device rd; 
-        std::mt19937 gen(rd());
         std::uniform_int_distribution<T> distrib(a, b);
         std::vector<std::pair<T, T>> vec(sz);
 
         for (auto& [a1, a2] : vec) {
-            a1 = distrib(gen);
-            a2 = distrib(gen);
+            a1 = distrib(rng);
+            a2 = distrib(rng);
             if (a1 > a2) std::swap(a1, a2);
         }
         return vec;
@@ -102,7 +96,7 @@ namespace Random {
         
         std::vector<int> remapping(N);
         std::iota(remapping.begin(), remapping.end(), 0);
-        std::random_shuffle(remapping.begin(), remapping.end());
+        std::shuffle(remapping.begin(), remapping.end(), rng);
 
         std::vector<std::pair<int, int>> vec(N-1);
         for (int i = 1; i < N; i++) {
@@ -117,7 +111,7 @@ namespace Random {
 
     // Generates a random forest, the return vector are the edges of the forest. N is the numbers of nodes and trees the number of trees in the forest.
     std::vector<std::pair<int, int>> rnd_forest(int N, int trees) {
-        if (N > trees) {
+        if (N < trees) {
             throw std::invalid_argument("The number of nodes should be at least equal to the number of forest.");
         }
         auto tree_szs = rnd_nums_that_sum(N, trees);

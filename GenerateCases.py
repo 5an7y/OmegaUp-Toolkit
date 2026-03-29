@@ -1,6 +1,7 @@
 import argparse
 import os
 import pathlib
+import platform
 import subprocess
 import json
 from tqdm import tqdm
@@ -27,6 +28,9 @@ else:
     cpp_compiler = "g++"
     cpp_flags = "-std=c++20"
 
+libs_path = pathlib.Path(__file__).parent / "Libs"
+stack_flag = f"-Wl,--stack,{args.stack}" if platform.system() == "Windows" else ""
+
 path = args.path
 stack_size = args.stack
 gen_path = path/"case_generator.cpp"
@@ -48,10 +52,10 @@ if args.use_solution:
     if not os.path.isfile(solution_path):
         print(f"Didn't found the solution {solution_path}")
         exit()
-    subprocess.run(f"{cpp_compiler} {solution_path} -I ./Libs {cpp_flags} -o {sol_exe_path} -Wl,--stack,{stack_size}", check=True)
+    subprocess.run(f"{cpp_compiler} {solution_path} -I {libs_path} {cpp_flags} -o {sol_exe_path} {stack_flag}", check=True)
 
 # Compile the generator.cpp and parse the cases.arg
-subprocess.run(f"{cpp_compiler} {gen_path} -I ./Libs {cpp_flags} -o {exe_path} -Wl,--stack,{stack_size}", check=True)
+subprocess.run(f"{cpp_compiler} {gen_path} -I {libs_path} {cpp_flags} -o {exe_path} {stack_flag}", check=True)
 num_lines = sum(1 for line in open(args_path))
 f = open(args_path, "r")
 errors = []
