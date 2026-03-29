@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omegaup-toolkit"
+version = "0.1.0"
+description = "Toolkit for creating and testing competitive programming problems for OmegaUp"
+requires-python = ">=3.6"
+dependencies = ["tqdm"]
+
+[tool.setuptools.packages.find]
+include = ["omegaup*"]
+
+[project.scripts]
+omegaup = "omegaup.cli:main"
