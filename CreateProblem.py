@@ -4,7 +4,7 @@ import pathlib
 import shutil
 
 # Constants
-template_dir = pathlib.Path(__file__).parent / "Examples" / "Template"
+template_dir = pathlib.Path(__file__).parent / "template"
 
 # Initialize parser
 parser = argparse.ArgumentParser(description = "Program to create a problem using this library")
