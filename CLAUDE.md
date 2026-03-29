@@ -6,13 +6,13 @@ This file is automatically read by Claude Code at the start of each conversation
 
 ## Project Overview
 
-**OmegaUp-Toolkit** is a set of tools for creating competitive programming problems compatible with the [OmegaUp](https://omegaup.com) judge platform. It provides:
+**OmegaUp-Toolkit** is a Python package and CLI for creating competitive programming problems for the [OmegaUp](https://omegaup.com) judge platform. It provides:
 
-- Python scripts to scaffold new problems, generate test cases, and test solutions
+- A CLI (`omegaup`) to scaffold problems, generate test cases, test solutions, and publish to OmegaUp
 - C++ libraries for writing case generators (`Libs/`)
-- Problem templates (`Examples/`)
+- A base problem template (`template/`)
 
-This toolkit is platform-agnostic — use it for any contest, training program, or problem set that targets OmegaUp.
+Install once with `pip install -e .` and the `omegaup` command is available system-wide.
 
 ---
 
@@ -20,38 +20,53 @@ This toolkit is platform-agnostic — use it for any contest, training program, 
 
 ```
 OmegaUp-Toolkit/
-├── CreateProblem.py       # Creates a new problem from the template
-├── GenerateCases.py       # Compiles and runs the case generator
-├── TestCases.py           # Compiles and tests solutions against cases
-├── Libs/                  # C++ libraries for case generators
-│   ├── Generator.hpp      # File I/O for case generator
+├── omegaup_toolkit/       # Python package (all CLI logic lives here)
+│   ├── cli.py             # Entry point — routes subcommands
+│   ├── create.py          # omegaup create
+│   ├── generate.py        # omegaup generate-cases
+│   ├── test.py            # omegaup test
+│   ├── login.py           # omegaup login / logout
+│   └── auth.py            # Token storage and API client helpers
+├── Libs/                  # C++ headers for case generators
+│   ├── Generator.hpp      # File I/O (case_in, case_out, arguments)
 │   ├── Random.hpp         # Random generation utilities
-│   ├── Background.hpp     # Segment tree (internal dependency)
-│   └── Constants.hpp      # Constants
-└── Examples/
-    ├── Template/          # Base template for new problems
-    ├── InteractiveTemplate/  # Template for interactive problems
-    └── SimpleSum/         # Worked example
+│   ├── Background.hpp     # Segment tree (internal dependency of Random.hpp)
+│   └── Constants.hpp      # String charset constants
+├── template/              # Base template copied by omegaup create
+├── Examples/
+│   ├── SimpleSum/         # Worked example problem
+│   └── InteractiveTemplate/  # Reference for interactive problems
+└── pyproject.toml         # Package definition (entry point: omegaup)
 ```
 
 ---
 
-## Problem Structure
+## CLI Commands
 
-Each problem is a folder with this structure:
+```bash
+omegaup login                                        # Save OmegaUp API token
+omegaup logout                                       # Remove saved credentials
+omegaup create         <path> [--yes] [--validator] [--testplan]
+omegaup generate-cases <path> [--use_solution] [--stack N]
+omegaup test           <path> [--time_limit N] [--solutions ...] [--cases ...]
+```
+
+Credentials are saved to `~/.config/omegaup/credentials.json`.
+`auth.get_client()` returns an authenticated `omegaup.api.Client` for use in future commands (e.g. `omegaup publish`).
+
+---
+
+## Problem Structure
 
 ```
 MyProblem/
 ├── case_generator.cpp     # Generates test cases
 ├── cases.arg              # Arguments for each case (one per line)
 ├── cases/                 # Generated .in and .out files
-│   ├── c1.in
-│   ├── c1.out
-│   └── ...
 ├── solution/
 │   └── solution.cpp       # Reference solution (can have multiple .cpp files)
 ├── statements/
-│   └── es.markdown        # Problem statement in OmegaUp's markdown format
+│   └── es.markdown        # Problem statement in OmegaUp markdown format
 ├── testplan               # (optional) Groups and weights for scoring
 └── validator.cpp          # (optional) Custom output validator
 ```
@@ -60,7 +75,7 @@ MyProblem/
 
 ## Statement Format: `statements/es.markdown`
 
-OmegaUp uses a special Markdown format with predefined sections. Math formulas go between `$...$` (LaTeX inline).
+OmegaUp uses a special Markdown format. Math formulas go between `$...$` (LaTeX inline).
 
 ```markdown
 # Historia
@@ -104,70 +119,53 @@ Optional description of this example.
 - $1 \leq N \leq 100$
 ```
 
-**Important rules:**
-- `||input`, `||output`, `||description`, `||end` are OmegaUp special markers.
-- `||description` is optional per example.
-- Always end the examples section with `||end`.
-- Math formulas use LaTeX syntax: `$O(N \log N)$`, `$10^9$`, etc.
+**Rules:** `||input`, `||output`, `||description`, `||end` are OmegaUp markers. Always end with `||end`. `||description` is optional per example.
 
 ---
 
 ## `cases.arg` Format
 
-Each line defines one test case. The first token is the **case name**, the rest are **arguments** the generator can read.
+Each line: first token is the **case name**, the rest are **arguments** the generator reads.
 
 ```
-c1 100
-c2 1000
-c3 100000
+small_1 1 100
+small_2 1 100
+large_1 1 1000000000
+edge_1  0 0
 ```
 
-The generator receives the case name as `argv[1]` (used by `Generator::init_generator`) and additional arguments in `Generator::arguments`. Case names become the `.in` / `.out` file names.
-
-**Group convention:** If using `testplan`, cases are grouped by the prefix before the first dot:
+**Group convention for testplan:** cases are grouped by prefix before the first dot:
 ```
 group1.c1 100
 group1.c2 500
 group2.c1 1000
 ```
-This creates two groups (`group1`, `group2`). Within a group, **all cases must be AC** to earn the group's points.
 
 ---
 
 ## `testplan` Format
 
-Defines the weight of each case for scoring. If absent, all cases are worth equal points.
-
 ```
-c1 10
-c2 10
-c3 20
-group1.c1 15
-group1.c2 15
-group2.c1 30
+small_1 0
+small_2 0
+large_1 50
+large_2 50
 ```
 
-Generate a skeleton with:
-```bash
-python CreateProblem.py path/to/MyProblem --testplan
-```
-(Assigns weight 0 to all cases; adjust manually.)
+Weight `0` = tested but no points. All cases in a group must be AC to earn the group's points. Generate a skeleton with `omegaup create <path> --testplan`.
 
 ---
 
-## `Generator.hpp` Library
-
-Provides three streams for use in `case_generator.cpp`:
+## `Generator.hpp`
 
 | Stream | Usage |
 |--------|-------|
-| `Generator::case_in` | Writes the case input (`.in` file) |
-| `Generator::case_out` | Writes the expected output (`.out` file) |
-| `Generator::arguments` | Reads arguments from `cases.arg` |
+| `Generator::case_in` | Writes the `.in` file |
+| `Generator::case_out` | Writes the `.out` file |
+| `Generator::arguments` | Reads extra arguments from `cases.arg` |
 
-**Always call first:** `Generator::init_generator(argc, argv);`
+Always call `Generator::init_generator(argc, argv)` first.
 
-**Complete example:**
 ```cpp
 #include "Generator.hpp"
 #include "Random.hpp"
@@ -175,18 +173,16 @@ Provides three streams for use in `case_generator.cpp`:
 int main(int argc, char *argv[]) {
     Generator::init_generator(argc, argv);
 
-    int N;
-    Generator::arguments >> N;
-
-    auto vec = Random::rnd(1, 1000, N);
+    int N, maxVal;
+    Generator::arguments >> N >> maxVal;
 
     Generator::case_in << N << '\n';
     for (int i = 0; i < N; i++)
-        Generator::case_in << vec[i] << " \n"[i == N-1];
+        Generator::case_in << Random::rnd(1, maxVal) << " \n"[i == N-1];
 
-    // If output is simple, compute it here:
+    // If output is simple enough, write it directly:
     // Generator::case_out << answer;
-    // Otherwise, use --use_solution in GenerateCases.py
+    // Otherwise use --use_solution in generate-cases
 
     return 0;
 }
@@ -194,84 +190,32 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## `Random.hpp` Library
+## `Random.hpp`
 
-All functions are in the `Random` namespace:
+All functions in the `Random::` namespace. Uses a single global `mt19937` RNG.
 
 ```cpp
-// Single random number in [a, b] (inclusive)
-Random::rnd(a, b)
+// Numbers
+Random::rnd(a, b)                        // single integer in [a, b]
+Random::rnd(a, b, sz)                    // vector of sz integers in [a, b]
+Random::rnd_unique(a, b, sz)             // vector of sz UNIQUE integers in [a, b]
+Random::rnd_pair(a, b)                   // ordered pair (a1 <= a2) in [a, b]
+Random::rnd_pair(a, b, sz)               // vector of ordered pairs
+Random::rnd_nums_that_sum(sum, sz)       // sz positive integers summing to sum
+Random::rnd_nums_that_sum(sum, sz, true) // allow zeros
 
-// Vector of sz random numbers in [a, b]
-Random::rnd(a, b, sz)
+// Strings & permutations
+Random::rnd_string(len)                  // random lowercase string of length len
+Random::rnd_string(len, charset)         // custom charset (e.g. "abc" or Constants::uppercaseEnglishAlphabet)
+Random::rnd_permutation(n)               // random permutation of [0, n)
+Random::rnd_permutation(n, base)         // random permutation of [base, base+n)
 
-// Vector of sz UNIQUE random numbers in [a, b]
-Random::rnd_unique(a, b, sz)
-
-// Ordered pair (a1 <= a2) with values in [a, b]
-Random::rnd_pair(a, b)
-
-// Vector of ordered pairs
-Random::rnd_pair(a, b, sz)
-
-// Vector of sz numbers that sum exactly to `sum`
-Random::rnd_nums_that_sum(sum, sz)
-Random::rnd_nums_that_sum(sum, sz, allow_zero=true)
-
-// Random tree of N nodes, returns edge list
-Random::rnd_tree(N)
-
-// Random forest of N nodes and `trees` trees
-Random::rnd_forest(N, trees)
+// Graphs
+Random::rnd_tree(N)                      // random tree: N-1 edges as pairs
+Random::rnd_forest(N, trees)             // random forest: N nodes, trees trees (N >= trees)
 ```
 
-**Types:** All functions are templates, work with `int`, `long long`, etc.
-
----
-
-## Python Scripts
-
-### `CreateProblem.py` — Create a new problem
-
-```bash
-python CreateProblem.py path/to/MyProblem
-python CreateProblem.py path/to/MyProblem --validator   # include validator.cpp
-python CreateProblem.py path/to/MyProblem --testplan    # generate testplan from cases.arg
-```
-
-Copies the `Examples/Template/` structure to the specified directory.
-
-### `GenerateCases.py` — Generate test cases
-
-```bash
-python GenerateCases.py path/to/MyProblem
-python GenerateCases.py path/to/MyProblem --use_solution   # generate .out from solution.cpp
-python GenerateCases.py path/to/MyProblem --stack 33554432  # larger stack (32MB)
-```
-
-- Compiles `case_generator.cpp` with `g++ -std=c++20 -I ./Libs`
-- Reads `cases.arg` and runs the generator for each case
-- With `--use_solution`: compiles and runs `solution/solution.cpp` on each `.in` to generate `.out`
-- **Note:** Default stack is 16MB (`16777216`). For deep recursion use `--stack 33554432`
-
-### `TestCases.py` — Test solutions
-
-```bash
-python TestCases.py path/to/MyProblem
-python TestCases.py path/to/MyProblem --time_limit 2000         # 2-second limit
-python TestCases.py path/to/MyProblem --solutions sol1.cpp      # test only sol1.cpp
-python TestCases.py path/to/MyProblem --cases c1 c2 c5          # test only these cases
-python TestCases.py path/to/MyProblem --validator               # use validator.cpp
-```
-
-Verdicts:
-| Verdict | Meaning |
-|---------|---------|
-| AC | Accepted |
-| WA | Wrong Answer |
-| TLE | Time Limit Exceeded |
-| RTE | Runtime Error |
-| PA | Partially Accepted (validator only) |
+Available charsets: `Constants::lowercaseEnglishAlphabet`, `Constants::uppercaseEnglishAlphabet`, `Constants::specialCharacters`, `Constants::spaces`.
 
 ---
 
@@ -279,30 +223,30 @@ Verdicts:
 
 1. **Create the structure:**
    ```bash
-   python CreateProblem.py path/to/MyProblem
+   omegaup create path/to/MyProblem
    ```
 
 2. **Write the statement** in `statements/es.markdown`.
 
-3. **Design test cases** in `cases.arg`: names and parameters.
+3. **Design test cases** in `cases.arg`.
 
-4. **Implement the generator** in `case_generator.cpp` using `Generator.hpp` and `Random.hpp`.
+4. **Implement the generator** in `case_generator.cpp`.
 
 5. **Implement the reference solution** in `solution/solution.cpp`.
 
 6. **Generate cases:**
    ```bash
-   python GenerateCases.py path/to/MyProblem --use_solution
+   omegaup generate-cases path/to/MyProblem --use_solution
    ```
 
-7. **Verify the solution:**
+7. **Verify:**
    ```bash
-   python TestCases.py path/to/MyProblem
+   omegaup test path/to/MyProblem
    ```
 
-8. **(Optional) Create testplan** for group-based scoring:
+8. **(Optional) Create testplan:**
    ```bash
-   python CreateProblem.py path/to/MyProblem --testplan
+   omegaup create path/to/MyProblem --testplan
    # Edit testplan to assign weights
    ```
 
@@ -310,7 +254,7 @@ Verdicts:
 
 ## Local Configuration
 
-Create a `local_config.json` at the toolkit root to override the compiler:
+Create `local_config.json` at the toolkit root to override compiler settings (gitignored):
 
 ```json
 {
@@ -319,14 +263,12 @@ Create a `local_config.json` at the toolkit root to override the compiler:
 }
 ```
 
-This file is gitignored.
-
 ---
 
 ## Keeping This File Updated
 
 Update this file when:
-- A new pattern for designing cases is discovered
-- A new convention is established
-- A new tool or library is added
+- New CLI commands are added
+- New `Random.hpp` functions are added
+- A new convention or pattern is established
 - A common mistake and its fix are identified
