@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser(description = "Program to create a problem usin
 parser.add_argument('path', type=pathlib.Path, help = "Directory where the problem should be wrote \"your/path/problem_name\"")
 parser.add_argument('--validator', action='store_true', help = "Use this flag when creating your own case validator")
 parser.add_argument('--testplan', action='store_true', help = "Use this flag when you want to create only the testplan based on the cases.arg")
+parser.add_argument('-y', '--yes', action='store_true', help = "Automatically confirm creation of new directories")
 
 # Read arguments from command line
 args = parser.parse_args()
@@ -40,12 +41,14 @@ if os.path.isdir(path):
 for x in path.parts[:-1]:
     p = p / x
     if not os.path.isdir(p):
-        val = input(f"You are creating a new directory {p}, are you sure? (Y/N)")
+        if args.yes:
+            continue
+        val = input(f"You are creating a new directory '{p}', are you sure? (Y/N) ")
         if val not in ["Y", "N"]:
-            print("You entered an invalid option")
-            exit()
+            print("Invalid option. Please enter Y or N.")
+            exit(1)
         if val == "N":
-            exit()
+            exit(0)
 
 shutil.copytree(template_dir, path)
 if not args.validator:

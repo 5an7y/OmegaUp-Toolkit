@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(description = "Program to generate the cases of
 # Adding optional argument
 parser.add_argument('path', type=pathlib.Path, help = "Directory where the problem is")
 parser.add_argument('--use_solution', action='store_true', help = "Use this flag when creating your own case checker")
-parser.add_argument('--stack', type=int, default=16777216, help = "Size of the stack for the solution and generator")
+parser.add_argument('--stack', type=int, default=16777216, help = "Size of the stack for the solution and generator (Windows only)")
 
 # Read arguments from command line
 args = parser.parse_args()
@@ -29,68 +29,75 @@ else:
     cpp_flags = "-std=c++20"
 
 libs_path = pathlib.Path(__file__).parent / "Libs"
-stack_flag = f"-Wl,--stack,{args.stack}" if platform.system() == "Windows" else ""
+compile_flags = cpp_flags.split()
+stack_flag = [f"-Wl,--stack,{args.stack}"] if platform.system() == "Windows" else []
 
 path = args.path
-stack_size = args.stack
-gen_path = path/"case_generator.cpp"
-exe_path = path/"case_generator.exe"
-args_path = path/"cases.arg"
-solution_path = path/"solution/solution.cpp"
-sol_exe_path  = path/"solution/solution.exe"
+gen_path = path / "case_generator.cpp"
+exe_path = path / "case_generator.exe"
+args_path = path / "cases.arg"
+solution_path = path / "solution" / "solution.cpp"
+sol_exe_path  = path / "solution" / "solution.exe"
 
-# Check that files exists in the folder
+# Check that required files exist
 if not os.path.isfile(gen_path):
-    print(f"Didn't found the generator {gen_path}")
-    exit()
+    print(f"Error: generator not found: {gen_path}")
+    exit(1)
 
 if not os.path.isfile(args_path):
-    print(f"Didn't found the cases arguments {args_path}")
-    exit()
+    print(f"Error: cases.arg not found: {args_path}")
+    exit(1)
 
 if args.use_solution:
     if not os.path.isfile(solution_path):
-        print(f"Didn't found the solution {solution_path}")
-        exit()
-    subprocess.run(f"{cpp_compiler} {solution_path} -I {libs_path} {cpp_flags} -o {sol_exe_path} {stack_flag}", check=True)
+        print(f"Error: solution not found: {solution_path}")
+        exit(1)
+    print(f"Compiling {solution_path}...")
+    subprocess.run(
+        [cpp_compiler, str(solution_path), "-I", str(libs_path)] + compile_flags + ["-o", str(sol_exe_path)] + stack_flag,
+        check=True
+    )
 
-# Compile the generator.cpp and parse the cases.arg
-subprocess.run(f"{cpp_compiler} {gen_path} -I {libs_path} {cpp_flags} -o {exe_path} {stack_flag}", check=True)
-num_lines = sum(1 for line in open(args_path))
-f = open(args_path, "r")
+# Compile the case generator
+print(f"Compiling {gen_path}...")
+subprocess.run(
+    [cpp_compiler, str(gen_path), "-I", str(libs_path)] + compile_flags + ["-o", str(exe_path)] + stack_flag,
+    check=True
+)
+
 errors = []
 
 # Generate cases
-with tqdm(total = num_lines) as pbar:
-    for case_args in f:
-        case_name = case_args.split()[0]
-        pbar.set_postfix(case = case_name)
+with open(args_path, "r") as f:
+    lines = [line for line in f if line.strip()]
 
-        try :
-            subprocess.run(f"{exe_path} {path}/cases/{case_args}", check=True)
+with tqdm(total=len(lines)) as pbar:
+    for case_args in lines:
+        case_parts = case_args.split()
+        case_name = case_parts[0]
+        pbar.set_postfix(case=case_name)
+
+        case_file_path = str(path / "cases" / case_name)
+        cmd = [str(exe_path), case_file_path] + case_parts[1:]
+
+        try:
+            subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:
             errors.append((case_name, e))
         else:
             if args.use_solution:
-                case_name = case_name.rstrip()
-                input_file  = open(f"{path}/cases/{case_name}.in", 'r')
-                output_file = open(f"{path}/cases/{case_name}.out", 'w')
-                subprocess.run(f"{sol_exe_path}", stdin = input_file, stdout = output_file, check=True)
-                input_file.close()
-                output_file.close()
+                with open(f"{path}/cases/{case_name}.in", 'r') as input_file, \
+                     open(f"{path}/cases/{case_name}.out", 'w') as output_file:
+                    subprocess.run([str(sol_exe_path)], stdin=input_file, stdout=output_file, check=True)
 
         pbar.update(1)
 
-f.close()
-
-# Show final errors
-if len(errors) > 0:
-    print("ERROR WHEN GENERATING SOME CASES:\n")
-    print([case_name for case_name, msg in errors])
-    print(f"\nError for {errors[0][0]}:\n")
-    print(errors[0][1])
-
 os.remove(exe_path)
-
 if args.use_solution:
     os.remove(sol_exe_path)
+
+# Show final errors
+if errors:
+    print(f"\nErrors generating {len(errors)} case(s):")
+    for name, err in errors:
+        print(f"  - {name}: {err}")

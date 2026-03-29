@@ -1,9 +1,12 @@
 #pragma once
 
+#include <numeric>
+#include <string>
 #include <vector>
 #include <algorithm>
 #include <random>
 #include "Background.hpp"
+#include "Constants.hpp"
 
 namespace Random {
 
@@ -70,9 +73,30 @@ namespace Random {
         return vec;
     }
 
+    // Generates a random string of length `len` using characters from `charset`.
+    std::string rnd_string(std::size_t len, const std::string& charset = Constants::lowercaseEnglishAlphabet) {
+        if (charset.empty())
+            throw std::invalid_argument("In rnd_string: charset cannot be empty.");
+        std::uniform_int_distribution<std::size_t> distrib(0, charset.size() - 1);
+        std::string result(len, ' ');
+        for (auto& c : result)
+            c = charset[distrib(rng)];
+        return result;
+    }
+
+    // Generates a random permutation of [base, base+n).
+    std::vector<int> rnd_permutation(int n, int base = 0) {
+        std::vector<int> perm(n);
+        std::iota(perm.begin(), perm.end(), base);
+        std::shuffle(perm.begin(), perm.end(), rng);
+        return perm;
+    }
+
     // Generates a vector with random numbers, such that the sum of all numbers equals SUM. If allow_zero flag is enable, zeros are allowed.
     template <typename T>
     std::vector<T> rnd_nums_that_sum(T sum, std::size_t sz, bool allow_zero = false) {
+        if (!allow_zero && (T)sz > sum)
+            throw std::invalid_argument("In rnd_nums_that_sum: cannot generate " + std::to_string(sz) + " positive numbers that sum to " + std::to_string(sum) + ".");
         std::vector<T> uniqueRandom;
         if (allow_zero) uniqueRandom = rnd(0, sum, sz);
         else uniqueRandom = rnd_unique(0, sum-1, sz);
