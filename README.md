@@ -33,6 +33,9 @@ This makes the `omegaup` command available system-wide. You only need to do this
 ## Quick Start
 
 ```bash
+# 0. Authenticate with your OmegaUp account (once)
+omegaup login
+
 # 1. Scaffold a new problem
 omegaup create path/to/MyProblem
 
