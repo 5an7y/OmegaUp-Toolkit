@@ -47,8 +47,11 @@ def verify_with_api(token: str) -> tuple[bool, str]:
     """
     try:
         client = omegaup.api.Client(api_token=token)
-        session = client.session.currentSession()
-        username = session.get('identity', {}).get('username', '') or session.get('user', {}).get('username', '')
+        response = client.session.currentSession()
+        # Response structure: response.session.identity.username
+        inner = getattr(response, 'session', None)
+        identity = getattr(inner, 'identity', None)
+        username = getattr(identity, 'username', '') if identity else ''
         return True, username
     except Exception as e:
         msg = str(e).lower()
