@@ -4,4 +4,9 @@ source: OMI Yucatán
 time_limit: 1000
 memory_limit: 256
 visibility: private
+type: normal
+validator: token
 languages: cpp17,cpp20
+tags:
+  - name: math
+    public: true
