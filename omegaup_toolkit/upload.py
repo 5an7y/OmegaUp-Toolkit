@@ -104,6 +104,11 @@ def _build_zip(problem_path: pathlib.Path) -> io.BytesIO:
             for f in sorted(cases_dir.iterdir()):
                 if f.is_file() and f.suffix in ('.in', '.out'):
                     zf.write(f, f'cases/{f.name}')
+        else:
+            # OmegaUp requires at least one case even for lectura problems.
+            # Include a minimal dummy case: read one integer, output it.
+            zf.writestr('cases/dummy.in', '0\n')
+            zf.writestr('cases/dummy.out', '0\n')
 
         testplan = problem_path / 'testplan'
         if testplan.exists():
