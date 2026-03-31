@@ -7,6 +7,8 @@ import shutil
 import questionary
 import yaml
 
+from omegaup_toolkit._tags import TAG_CHOICES, DEFAULT_TAG_LABEL, label_to_tag
+
 _TEMPLATE_DIR = pathlib.Path(__file__).parent.parent / "template"
 
 _LANGUAGES = [
@@ -95,7 +97,6 @@ def run(argv=None):
         prob_type  = 'normal'
         validator  = default_validator
         languages  = ['cpp17', 'cpp20']
-        tags_input = ''
     else:
         alias = questionary.text(
             "Alias:", default=default_alias
@@ -149,15 +150,18 @@ def run(argv=None):
         else:
             languages = []
 
-        tags_input = questionary.text(
-            "Tags públicas (separadas por coma):", default=""
+        tag_label = questionary.autocomplete(
+            "Tag pública (escribe para buscar):",
+            choices=TAG_CHOICES,
+            default=DEFAULT_TAG_LABEL,
+            validate=lambda v: v in TAG_CHOICES or "Selecciona una opción de la lista",
         ).ask()
+        selected_tag = label_to_tag(tag_label) if tag_label else "problemTagBruteForce"
 
-    tags = []
-    for t in (tags_input or '').split(','):
-        t = t.strip()
-        if t:
-            tags.append({'name': t, 'public': True})
+    if args.yes:
+        selected_tag = "problemTagBruteForce"
+
+    tags = [{'name': selected_tag, 'public': True}]
 
     metadata = {
         'alias': alias,
