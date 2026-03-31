@@ -156,7 +156,7 @@ def run(argv=None):
 
         # Tag autocomplete: empty default → shows all choices on first render
         tag_label = questionary.autocomplete(
-            "Topic tag (type to search, shows all when empty):",
+            "Topic tag (start typing to see options):",
             choices=TAG_CHOICES,
             default="",
             match_middle=True,
