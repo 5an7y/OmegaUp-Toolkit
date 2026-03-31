@@ -7,7 +7,9 @@ import shutil
 import questionary
 import yaml
 
-from omegaup_toolkit._tags import TAG_CHOICES, DEFAULT_TAG_LABEL, label_to_tag
+from omegaup_toolkit._tags import (
+    TAG_CHOICES, LEVEL_CHOICES, DEFAULT_TAG, DEFAULT_LEVEL, label_to_tag,
+)
 
 _TEMPLATE_DIR = pathlib.Path(__file__).parent.parent / "template"
 
@@ -37,11 +39,11 @@ def _folder_to_title(name: str) -> str:
     return s.strip()
 
 
-def _ask(yes: bool, prompt_fn):
-    """Run prompt_fn() unless --yes, in which case return its default."""
-    if yes:
-        return prompt_fn().skip_if(True, default=None).ask()
-    return prompt_fn().ask()
+def _tag_completer(text, state):
+    """Return all choices when text is empty; otherwise filter by text."""
+    needle = text.lower()
+    matches = [c for c in TAG_CHOICES if not needle or needle in c.lower()]
+    return matches[state] if state < len(matches) else None
 
 
 def run(argv=None):
@@ -86,82 +88,92 @@ def run(argv=None):
     default_title = _folder_to_title(folder_name)
     default_validator = 'custom' if args.validator else 'token'
 
-    print(f"\nConfigurando problem.yaml para: {path}\n")
+    print(f"\nConfiguring problem.yaml for: {path}\n")
 
     if args.yes:
-        alias      = default_alias
-        title      = default_title
-        time_limit = 1000
-        memory_mb  = 256
-        visibility = 'private'
-        prob_type  = 'normal'
-        validator  = default_validator
-        languages  = ['cpp17', 'cpp20']
+        alias       = default_alias
+        title       = default_title
+        time_limit  = 1000
+        memory_mb   = 256
+        visibility  = 'private'
+        prob_type   = 'normal'
+        validator   = default_validator
+        languages   = ['cpp17', 'cpp20']
+        topic_tag   = DEFAULT_TAG
+        level_tag   = DEFAULT_LEVEL
     else:
         alias = questionary.text(
             "Alias:", default=default_alias
         ).ask()
 
         title = questionary.text(
-            "Título:", default=default_title
+            "Title:", default=default_title
         ).ask()
 
         time_limit = int(questionary.text(
             "Time limit (ms):", default="1000",
-            validate=lambda v: v.isdigit() or "Debe ser un número entero"
+            validate=lambda v: v.isdigit() or "Must be an integer"
         ).ask())
 
         memory_mb = int(questionary.text(
             "Memory limit (MB):", default="256",
-            validate=lambda v: v.isdigit() or "Debe ser un número entero"
+            validate=lambda v: v.isdigit() or "Must be an integer"
         ).ask())
 
         visibility = questionary.select(
-            "Visibilidad:",
+            "Visibility:",
             choices=["private", "public"],
             default="private"
         ).ask()
 
         prob_type = questionary.select(
-            "Tipo de problema:",
+            "Problem type:",
             choices=[
-                questionary.Choice("Normal (con envíos de código)", value="normal"),
-                questionary.Choice("Lectura (sin envíos)", value="lectura"),
+                questionary.Choice("Normal (accepts code submissions)", value="normal"),
+                questionary.Choice("Reading (no submissions)", value="lectura"),
             ],
             default="normal"
         ).ask()
 
         validator = questionary.select(
-            "Validador:",
+            "Validator:",
             choices=[
-                questionary.Choice("token          — compara token por token (default)", value="token"),
-                questionary.Choice("token-caseless — igual pero ignora mayúsculas", value="token-caseless"),
-                questionary.Choice("literal        — comparación byte a byte exacta", value="literal"),
-                questionary.Choice("custom         — usa validator.cpp del problema", value="custom"),
+                questionary.Choice("token          — compare token by token (default)", value="token"),
+                questionary.Choice("token-caseless — same but case-insensitive", value="token-caseless"),
+                questionary.Choice("literal        — exact byte-by-byte comparison", value="literal"),
+                questionary.Choice("custom         — use validator.cpp from the problem", value="custom"),
             ],
             default=default_validator
         ).ask()
 
         if prob_type == 'normal':
             languages = questionary.checkbox(
-                "Lenguajes permitidos (espacio para marcar, enter para confirmar):",
+                "Allowed languages (space to toggle, enter to confirm):",
                 choices=_LANGUAGES
             ).ask() or ['cpp17', 'cpp20']
         else:
             languages = []
 
+        # Tag autocomplete: empty default → shows all choices on first render
         tag_label = questionary.autocomplete(
-            "Tag pública (escribe para buscar):",
+            "Topic tag (type to search, shows all when empty):",
             choices=TAG_CHOICES,
-            default=DEFAULT_TAG_LABEL,
-            validate=lambda v: v in TAG_CHOICES or "Selecciona una opción de la lista",
+            default="",
+            match_middle=True,
+            validate=lambda v: v in TAG_CHOICES or "Select an option from the list",
         ).ask()
-        selected_tag = label_to_tag(tag_label) if tag_label else "problemTagBruteForce"
+        topic_tag = label_to_tag(tag_label) if tag_label else DEFAULT_TAG
 
-    if args.yes:
-        selected_tag = "problemTagBruteForce"
+        level_tag = questionary.select(
+            "Difficulty level:",
+            choices=LEVEL_CHOICES,
+            default=DEFAULT_LEVEL,
+        ).ask()
 
-    tags = [{'name': selected_tag, 'public': True}]
+    tags = [
+        {'name': topic_tag, 'public': True},
+        {'name': level_tag, 'public': True},
+    ]
 
     metadata = {
         'alias': alias,
@@ -179,4 +191,4 @@ def run(argv=None):
     with open(path / 'problem.yaml', 'w') as f:
         yaml.dump(metadata, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
-    print(f"\n✓ Problema creado en {path}")
+    print(f"\n✓ Problem created at {path}")
