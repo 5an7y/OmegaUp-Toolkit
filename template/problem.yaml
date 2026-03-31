@@ -1,0 +1,7 @@
+alias: CHANGE-ME
+title: CHANGE ME
+source:
+time_limit: 1000
+memory_limit: 256
+visibility: private
+languages: cpp17,cpp20

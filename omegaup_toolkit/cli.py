@@ -9,6 +9,7 @@ Usage:
   omegaup create         <path> [--yes] [--validator] [--testplan]
   omegaup generate-cases <path> [--use_solution] [--stack N]
   omegaup test           <path> [--time_limit N] [--solutions ...] [--cases ...]
+  omegaup upload         <path> [--message "..."] [--yes] [--dry-run]
 
 Commands:
   login           Save your OmegaUp API token
@@ -16,6 +17,7 @@ Commands:
   create          Scaffold a new problem from the template
   generate-cases  Compile and run the case generator
   test            Test solutions against generated cases
+  upload          Upload a problem to OmegaUp (create or update)
 
 Run 'omegaup <command> --help' for details on each command.
 """
@@ -49,7 +51,11 @@ def main():
         from omegaup_toolkit.test import run
         run(argv)
 
+    elif cmd == "upload":
+        from omegaup_toolkit.upload import run
+        run(argv)
+
     else:
         print(f"Unknown command: '{cmd}'")
-        print("Available commands: login, logout, create, generate-cases, test")
+        print("Available commands: login, logout, create, generate-cases, test, upload")
         sys.exit(1)

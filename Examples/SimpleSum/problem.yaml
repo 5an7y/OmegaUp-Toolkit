@@ -1,0 +1,7 @@
+alias: simple-sum-omiyuc
+title: Suma Simple
+source: OMI Yucatán
+time_limit: 1000
+memory_limit: 256
+visibility: private
+languages: cpp17,cpp20
