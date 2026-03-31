@@ -1,35 +1,45 @@
 import argparse
-import json
 import os
 import pathlib
 import re
 import shutil
 
+import questionary
 import yaml
 
 _TEMPLATE_DIR = pathlib.Path(__file__).parent.parent / "template"
 
+_LANGUAGES = [
+    questionary.Choice("C++17", value="cpp17", checked=True),
+    questionary.Choice("C++20", value="cpp20", checked=True),
+    questionary.Choice("Java", value="java", checked=False),
+    questionary.Choice("Python 3", value="py3", checked=False),
+    questionary.Choice("C", value="c", checked=False),
+    questionary.Choice("C#", value="cs", checked=False),
+    questionary.Choice("Kotlin", value="kt", checked=False),
+    questionary.Choice("Ruby", value="rb", checked=False),
+    questionary.Choice("Lua", value="lua", checked=False),
+    questionary.Choice("Pascal", value="pas", checked=False),
+]
+
 
 def _folder_to_alias(name: str) -> str:
-    """Convert a folder name to a kebab-case alias. E.g. 'MiProblema' → 'mi-problema'."""
     s = re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', name)
     s = re.sub(r'[\s_]+', '-', s)
     return s.lower()
 
 
 def _folder_to_title(name: str) -> str:
-    """Convert a folder name to a human-readable title. E.g. 'MiProblema' → 'Mi Problema'."""
     s = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', name)
     s = re.sub(r'[_-]+', ' ', s)
     return s.strip()
 
 
-def _prompt(label: str, default: str, yes: bool) -> str:
-    """Prompt the user for a value, showing the default. Returns default if --yes."""
+def _ask(yes: bool, prompt_fn):
+    """Run prompt_fn() unless --yes, in which case return its default."""
     if yes:
-        return default
-    val = input(f"  {label:<20} [{default}]: ").strip()
-    return val if val else default
+        return prompt_fn().skip_if(True, default=None).ask()
+    return prompt_fn().ask()
 
 
 def run(argv=None):
@@ -61,37 +71,90 @@ def run(argv=None):
         if not os.path.isdir(p):
             if args.yes:
                 continue
-            val = input(f"You are creating a new directory '{p}', are you sure? (Y/N) ")
-            if val not in ["Y", "N"]:
-                print("Invalid option. Please enter Y or N.")
-                raise SystemExit(1)
-            if val == "N":
+            ok = questionary.confirm(f"Create new directory '{p}'?", default=True).ask()
+            if not ok:
                 raise SystemExit(0)
 
     shutil.copytree(_TEMPLATE_DIR, path)
     if not args.validator:
         os.remove(path / 'validator.cpp')
 
-    # Interactive problem.yaml setup
     folder_name = path.name
     default_alias = _folder_to_alias(folder_name)
     default_title = _folder_to_title(folder_name)
     default_validator = 'custom' if args.validator else 'token'
 
-    print(f"\nConfigurando problem.yaml para: {path}")
-    alias       = _prompt("Alias",         default_alias,      args.yes)
-    title       = _prompt("Título",        default_title,      args.yes)
-    time_limit  = _prompt("Time limit ms", "1000",             args.yes)
-    memory_mb   = _prompt("Memory MB",     "256",              args.yes)
-    visibility  = _prompt("Visibilidad",   "private",          args.yes)
-    prob_type   = _prompt("Tipo (normal/lectura)", "normal",   args.yes)
-    validator   = _prompt("Validador",     default_validator,  args.yes)
-    languages   = _prompt("Languages",     "cpp17,cpp20",      args.yes)
-    tags_input  = _prompt("Tags (CSV)",    "",                 args.yes)
+    print(f"\nConfigurando problem.yaml para: {path}\n")
 
-    # Parse tags: comma-separated names, all public
+    if args.yes:
+        alias      = default_alias
+        title      = default_title
+        time_limit = 1000
+        memory_mb  = 256
+        visibility = 'private'
+        prob_type  = 'normal'
+        validator  = default_validator
+        languages  = ['cpp17', 'cpp20']
+        tags_input = ''
+    else:
+        alias = questionary.text(
+            "Alias:", default=default_alias
+        ).ask()
+
+        title = questionary.text(
+            "Título:", default=default_title
+        ).ask()
+
+        time_limit = int(questionary.text(
+            "Time limit (ms):", default="1000",
+            validate=lambda v: v.isdigit() or "Debe ser un número entero"
+        ).ask())
+
+        memory_mb = int(questionary.text(
+            "Memory limit (MB):", default="256",
+            validate=lambda v: v.isdigit() or "Debe ser un número entero"
+        ).ask())
+
+        visibility = questionary.select(
+            "Visibilidad:",
+            choices=["private", "public"],
+            default="private"
+        ).ask()
+
+        prob_type = questionary.select(
+            "Tipo de problema:",
+            choices=[
+                questionary.Choice("Normal (con envíos de código)", value="normal"),
+                questionary.Choice("Lectura (sin envíos)", value="lectura"),
+            ],
+            default="normal"
+        ).ask()
+
+        validator = questionary.select(
+            "Validador:",
+            choices=[
+                questionary.Choice("token          — compara token por token (default)", value="token"),
+                questionary.Choice("token-caseless — igual pero ignora mayúsculas", value="token-caseless"),
+                questionary.Choice("literal        — comparación byte a byte exacta", value="literal"),
+                questionary.Choice("custom         — usa validator.cpp del problema", value="custom"),
+            ],
+            default=default_validator
+        ).ask()
+
+        if prob_type == 'normal':
+            languages = questionary.checkbox(
+                "Lenguajes permitidos (espacio para marcar, enter para confirmar):",
+                choices=_LANGUAGES
+            ).ask() or ['cpp17', 'cpp20']
+        else:
+            languages = []
+
+        tags_input = questionary.text(
+            "Tags públicas (separadas por coma):", default=""
+        ).ask()
+
     tags = []
-    for t in tags_input.split(','):
+    for t in (tags_input or '').split(','):
         t = t.strip()
         if t:
             tags.append({'name': t, 'public': True})
@@ -100,12 +163,12 @@ def run(argv=None):
         'alias': alias,
         'title': title,
         'source': '',
-        'time_limit': int(time_limit),
-        'memory_limit': int(memory_mb),
+        'time_limit': time_limit,
+        'memory_limit': memory_mb,
         'visibility': visibility,
         'type': prob_type,
         'validator': validator,
-        'languages': languages,
+        'languages': ','.join(languages) if languages else '',
         'tags': tags,
     }
 
