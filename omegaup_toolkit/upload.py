@@ -9,7 +9,7 @@ import yaml
 
 
 _REQUIRED_FIELDS = ['alias', 'title', 'time_limit', 'memory_limit', 'visibility',
-                    'type', 'validator', 'languages', 'tags']
+                    'type', 'validator', 'level', 'tags']
 
 _VALID_TYPES = ('normal', 'lectura')
 _VALID_VALIDATORS = ('token', 'token-caseless', 'literal', 'custom')
@@ -33,11 +33,11 @@ def _load_metadata(problem_path: pathlib.Path) -> dict:
 
     prob_type_early = data.get('type', '')
     for field in _REQUIRED_FIELDS:
-        # languages is not required for lectura problems
+        # languages only required for normal problems
         if field == 'languages' and prob_type_early == 'lectura':
             continue
         if field not in data or data[field] is None or str(data[field]).strip() == '':
-            # tags can be an empty list — handle separately below
+            # tags handled separately below
             if field != 'tags':
                 print(f"Error: '{field}' is missing or empty in problem.yaml")
                 sys.exit(1)
@@ -58,7 +58,7 @@ def _load_metadata(problem_path: pathlib.Path) -> dict:
     tags = data.get('tags') or []
     if not isinstance(tags, list) or len(tags) == 0:
         print("Error: 'tags' must be a non-empty list in problem.yaml")
-        print("  Example:\n    tags:\n      - name: dp\n        public: true")
+        print("  Example:\n    tags:\n      - name: problemTagBruteForce\n        public: true")
         sys.exit(1)
 
     public_tags = [t for t in tags if isinstance(t, dict) and t.get('public')]
@@ -118,7 +118,6 @@ def _build_zip(problem_path: pathlib.Path) -> io.BytesIO:
 
 
 def _max_output_size(problem_path: pathlib.Path) -> int:
-    """Return max .out file size in bytes, or 0 if none found."""
     cases_dir = problem_path / 'cases'
     sizes = [f.stat().st_size for f in cases_dir.glob('*.out') if f.is_file()] if cases_dir.exists() else []
     return max(sizes) if sizes else 0
@@ -155,23 +154,20 @@ def run(argv=None):
     _validate_folder(problem_path, meta.get('type', 'normal'))
     zip_buf = _build_zip(problem_path)
 
-    alias         = meta['alias']
-    title         = meta['title']
-    source        = meta.get('source') or ''
-    time_limit    = int(meta['time_limit'])
-    memory_limit  = int(meta['memory_limit'])
-    visibility    = meta['visibility']
-    prob_type     = meta['type']
-    validator     = meta['validator']
-    tags          = meta['tags']
+    alias        = meta['alias']
+    title        = meta['title']
+    source       = meta.get('source') or ''
+    time_limit   = int(meta['time_limit'])
+    memory_limit = int(meta['memory_limit'])
+    visibility   = meta['visibility']
+    prob_type    = meta['type']
+    validator    = meta['validator']
+    level        = meta['level']
+    tags         = meta['tags']
 
-    # type → languages: 'lectura' means no submissions (empty languages string)
     languages = '' if prob_type == 'lectura' else meta['languages']
-
-    # Auto-calculate output_limit: max .out size + 1000 bytes padding
     output_limit = _max_output_size(problem_path) + 1000
 
-    # Build selected_tags JSON string for the API
     selected_tags = json.dumps([
         {'tagname': t['name'], 'public': bool(t.get('public', False))}
         for t in tags
@@ -186,46 +182,48 @@ def run(argv=None):
                 print(f"  {name}  ({info.file_size} bytes)")
         print(f"\nMetadata:")
         print(f"  Alias:          {alias}")
-        print(f"  Título:         {title}")
+        print(f"  Title:          {title}")
         print(f"  Time limit:     {time_limit} ms")
         print(f"  Memory:         {memory_limit} MB")
-        print(f"  Visibilidad:    {visibility}")
-        print(f"  Tipo:           {prob_type}")
-        print(f"  Validador:      {validator}")
+        print(f"  Visibility:     {visibility}")
+        print(f"  Type:           {prob_type}")
+        print(f"  Validator:      {validator}")
+        print(f"  Level:          {level}")
         print(f"  Languages:      {languages!r}")
         print(f"  Output limit:   {output_limit} bytes (auto)")
         print(f"  Tags:           {selected_tags}")
-        print("\n(dry-run) No se hizo ninguna llamada a la API.")
+        print("\n(dry-run) No API call was made.")
         return
 
     from omegaup_toolkit.auth import get_client
     client = get_client()
 
     exists = _check_exists(client, alias)
-    action = "ACTUALIZAR" if exists else "CREAR"
+    action = "UPDATE" if exists else "CREATE"
 
     zip_buf.seek(0)
     with zipfile.ZipFile(zip_buf) as zf:
         file_list = ', '.join(zf.namelist())
     zip_buf.seek(0)
 
-    print(f"\nProblema a subir:")
+    print(f"\nProblem to upload:")
     print(f"  Alias:          {alias}")
-    print(f"  Título:         {title}")
+    print(f"  Title:          {title}")
     print(f"  Time limit:     {time_limit} ms")
     print(f"  Memory:         {memory_limit} MB")
-    print(f"  Visibilidad:    {visibility}")
-    print(f"  Tipo:           {prob_type}")
-    print(f"  Validador:      {validator}")
+    print(f"  Visibility:     {visibility}")
+    print(f"  Type:           {prob_type}")
+    print(f"  Validator:      {validator}")
+    print(f"  Level:          {level}")
     print(f"  Output limit:   {output_limit} bytes (auto)")
     print(f"  Tags:           {', '.join(t['name'] for t in tags)}")
-    print(f"  Acción:         {action}")
-    print(f"  Archivos:       {file_list}")
+    print(f"  Action:         {action}")
+    print(f"  Files:          {file_list}")
 
     if not args.yes:
-        answer = input("\n¿Continuar? [s/N]: ").strip().lower()
-        if answer not in ('s', 'si', 'sí', 'y', 'yes'):
-            print("Cancelado.")
+        answer = input("\nContinue? [y/N]: ").strip().lower()
+        if answer not in ('y', 'yes'):
+            print("Cancelled.")
             sys.exit(0)
 
     try:
@@ -239,15 +237,16 @@ def run(argv=None):
             visibility=visibility,
             validator=validator,
             languages=languages,
+            problem_level=level,
             selected_tags=selected_tags,
             files_={'contents': zip_buf},
         )
         if not exists:
             client.problem.create(**common)
-            print(f"\n✓ Creado: https://omegaup.com/arena/problem/{alias}/")
+            print(f"\n✓ Created: https://omegaup.com/arena/problem/{alias}/")
         else:
             client.problem.update(message=args.message, redirect=False, **common)
-            print(f"\n✓ Actualizado: https://omegaup.com/arena/problem/{alias}/")
+            print(f"\n✓ Updated: https://omegaup.com/arena/problem/{alias}/")
     except Exception as e:
-        print(f"\nError al subir el problema: {e}")
+        print(f"\nError uploading problem: {e}")
         sys.exit(1)

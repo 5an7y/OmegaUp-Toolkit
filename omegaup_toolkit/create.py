@@ -170,10 +170,7 @@ def run(argv=None):
             default=DEFAULT_LEVEL,
         ).ask()
 
-    tags = [
-        {'name': topic_tag, 'public': True},
-        {'name': level_tag, 'public': True},
-    ]
+    tags = [{'name': topic_tag, 'public': True}]
 
     metadata = {
         'alias': alias,
@@ -184,6 +181,7 @@ def run(argv=None):
         'visibility': visibility,
         'type': prob_type,
         'validator': validator,
+        'level': level_tag,
         'languages': ','.join(languages) if languages else '',
         'tags': tags,
     }
