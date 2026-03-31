@@ -173,10 +173,10 @@ def run(argv=None):
     languages = '' if prob_type == 'lectura' else meta['languages']
     output_limit = _max_output_size(problem_path) + 1000
 
-    selected_tags = json.dumps([
-        {'tagname': t['name'], 'public': bool(t.get('public', False))}
-        for t in tags
-    ])
+    tag_list = [{'tagname': t['name'], 'public': bool(t.get('public', False))} for t in tags]
+    if prob_type == 'lectura':
+        tag_list.append({'tagname': 'problemRestrictedTagNoSubmissions', 'public': False})
+    selected_tags = json.dumps(tag_list)
 
     if args.dry_run:
         print("Dry run — ZIP contents:")
