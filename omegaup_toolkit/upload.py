@@ -31,7 +31,11 @@ def _load_metadata(problem_path: pathlib.Path) -> dict:
         print("Error: problem.yaml is malformed (expected key-value pairs).")
         sys.exit(1)
 
+    prob_type_early = data.get('type', '')
     for field in _REQUIRED_FIELDS:
+        # languages is not required for lectura problems
+        if field == 'languages' and prob_type_early == 'lectura':
+            continue
         if field not in data or data[field] is None or str(data[field]).strip() == '':
             # tags can be an empty list — handle separately below
             if field != 'tags':
@@ -65,11 +69,14 @@ def _load_metadata(problem_path: pathlib.Path) -> dict:
     return data
 
 
-def _validate_folder(problem_path: pathlib.Path):
+def _validate_folder(problem_path: pathlib.Path, prob_type: str):
     statement = problem_path / 'statements' / 'es.markdown'
     if not statement.exists():
         print(f"Error: statements/es.markdown not found in {problem_path}")
         sys.exit(1)
+
+    if prob_type == 'lectura':
+        return  # no cases required for reading problems
 
     cases_dir = problem_path / 'cases'
     if not cases_dir.exists():
@@ -93,9 +100,10 @@ def _build_zip(problem_path: pathlib.Path) -> io.BytesIO:
     with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
         zf.write(problem_path / 'statements' / 'es.markdown', 'statements/es.markdown')
 
-        for f in sorted(cases_dir.iterdir()):
-            if f.is_file() and f.suffix in ('.in', '.out'):
-                zf.write(f, f'cases/{f.name}')
+        if cases_dir.exists():
+            for f in sorted(cases_dir.iterdir()):
+                if f.is_file() and f.suffix in ('.in', '.out'):
+                    zf.write(f, f'cases/{f.name}')
 
         testplan = problem_path / 'testplan'
         if testplan.exists():
@@ -112,7 +120,7 @@ def _build_zip(problem_path: pathlib.Path) -> io.BytesIO:
 def _max_output_size(problem_path: pathlib.Path) -> int:
     """Return max .out file size in bytes, or 0 if none found."""
     cases_dir = problem_path / 'cases'
-    sizes = [f.stat().st_size for f in cases_dir.glob('*.out') if f.is_file()]
+    sizes = [f.stat().st_size for f in cases_dir.glob('*.out') if f.is_file()] if cases_dir.exists() else []
     return max(sizes) if sizes else 0
 
 
@@ -144,7 +152,7 @@ def run(argv=None):
         sys.exit(1)
 
     meta = _load_metadata(problem_path)
-    _validate_folder(problem_path)
+    _validate_folder(problem_path, meta.get('type', 'normal'))
     zip_buf = _build_zip(problem_path)
 
     alias         = meta['alias']
