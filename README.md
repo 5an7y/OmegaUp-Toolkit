@@ -1,6 +1,6 @@
 # OmegaUp Toolkit
 
-A toolkit for creating and testing competitive programming problems for the [OmegaUp](https://omegaup.com) judge platform.
+A toolkit for creating, testing, and publishing competitive programming problems on [OmegaUp](https://omegaup.com).
 
 ## Requirements
 
@@ -39,13 +39,17 @@ omegaup login
 # 1. Scaffold a new problem
 omegaup create path/to/MyProblem
 
-# 2. Implement case_generator.cpp and solution/solution.cpp
+# 2. Write your statement (statements/es.markdown)
+#    and implement case_generator.cpp + solution/solution.cpp
 
-# 3. Generate test cases (using the solution to produce .out files)
+# 3. Generate test cases (runs solution to produce .out files)
 omegaup generate-cases path/to/MyProblem --use_solution
 
-# 4. Test all solutions
+# 4. Test all solutions locally
 omegaup test path/to/MyProblem
+
+# 5. Publish to OmegaUp
+omegaup upload path/to/MyProblem
 ```
 
 See `Examples/SimpleSum/` for a complete working example.
@@ -79,19 +83,21 @@ MyProblem/
 ├── case_generator.cpp      # generates test cases
 ├── cases.arg               # arguments for each case (one per line)
 ├── cases/                  # generated .in and .out files
+├── problem.yaml            # metadata for omegaup upload
 ├── solution/
 │   ├── solution.cpp        # reference (correct) solution
 │   └── brute.cpp           # optional: other solutions to compare
 ├── statements/
 │   └── es.markdown         # problem statement (OmegaUp format)
-└── testplan                # optional: case weights for scoring
+├── testplan                # optional: case weights for scoring
+└── validator.cpp           # optional: custom output checker
 ```
 
 ---
 
 ## omegaup create
 
-Scaffolds a new problem from the template.
+Scaffolds a new problem from the template and runs an interactive setup for `problem.yaml`.
 
 ```bash
 omegaup create <path> [flags]
@@ -100,24 +106,28 @@ omegaup create <path> [flags]
 **Examples:**
 
 ```bash
-# Create a problem (prompts before creating new parent directories)
+# Create a normal problem (interactive setup)
 omegaup create Phase1/Arrays/MaxSubarray
 
-# Skip confirmation prompts
+# Skip all prompts (use defaults)
 omegaup create Phase1/Arrays/MaxSubarray --yes
 
 # Include a custom validator
 omegaup create Phase1/Arrays/MaxSubarray --validator
 
-# Regenerate testplan from cases.arg
+# Create a reading-only problem (no submissions, no test cases needed)
+omegaup create Phase1/Readings/Intro --lecture-only
+
+# Regenerate testplan from existing cases.arg
 omegaup create Phase1/Arrays/MaxSubarray --testplan
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--yes` / `-y` | Automatically confirm new parent directory creation |
+| `--yes` / `-y` | Accept all defaults without prompting |
 | `--validator` | Include a `validator.cpp` template |
-| `--testplan` | Create/update `testplan` based on `cases.arg` |
+| `--lecture-only` | Create a reading problem (`type: lectura`) — no submissions or cases required |
+| `--testplan` | Create/update `testplan` from `cases.arg` |
 
 ---
 
@@ -256,6 +266,40 @@ omegaup test path/to/MyProblem --validator
 
 ---
 
+## omegaup upload
+
+Packages and publishes a problem to OmegaUp. Reads metadata from `problem.yaml` (created automatically by `omegaup create`).
+
+```bash
+omegaup upload <path> [flags]
+```
+
+```bash
+# Upload (prompts for confirmation)
+omegaup upload path/to/MyProblem
+
+# Skip confirmation
+omegaup upload path/to/MyProblem --yes
+
+# Preview what would be uploaded without making any API call
+omegaup upload path/to/MyProblem --dry-run
+
+# Custom version history message
+omegaup upload path/to/MyProblem --message "Fix edge case in large_3"
+```
+
+| Flag | Description |
+|------|-------------|
+| `--yes` / `-y` | Skip confirmation prompt |
+| `--dry-run` | Print ZIP contents and metadata without uploading |
+| `--message TEXT` | Commit message for OmegaUp version history |
+
+The command detects whether the problem already exists and creates or updates it accordingly. `output_limit` is calculated automatically from the largest `.out` file.
+
+See [`problem-yaml.md`](problem-yaml.md) for a full reference of all `problem.yaml` fields and [`tags-reference.md`](tags-reference.md) for the list of available OmegaUp topic tags.
+
+---
+
 ## testplan
 
 Optional file for grouping cases and assigning point weights. If absent, each case is worth 1 point.
@@ -282,7 +326,7 @@ Enable it with `--validator` in `omegaup create` and `omegaup test`.
 
 ## Local Configuration
 
-Create `local_config.json` in the toolkit root to override compiler settings:
+Create `local_config.json` in the toolkit root to override compiler settings (this file is gitignored — safe to store local paths):
 
 ```json
 {
