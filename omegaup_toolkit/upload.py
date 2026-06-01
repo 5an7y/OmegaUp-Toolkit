@@ -98,7 +98,12 @@ def _build_zip(problem_path: pathlib.Path) -> io.BytesIO:
     cases_dir = problem_path / 'cases'
 
     with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.write(problem_path / 'statements' / 'es.markdown', 'statements/es.markdown')
+        # Empaqueta todo el contenido de statements/ (es.markdown + imagenes
+        # u otros recursos que el enunciado pueda referenciar).
+        statements_dir = problem_path / 'statements'
+        for f in sorted(statements_dir.iterdir()):
+            if f.is_file():
+                zf.write(f, f'statements/{f.name}')
 
         if cases_dir.exists():
             for f in sorted(cases_dir.iterdir()):
@@ -132,6 +137,11 @@ def _check_exists(client, alias: str) -> bool:
     try:
         client.problem.details(problem_alias=alias)
         return True
+    except AttributeError:
+        # SDK parsing bug: API response has dict fields returned as []
+        # Can't determine existence reliably — assume not exists and let
+        # the create/update logic below handle the alias-exists fallback.
+        return False
     except Exception as e:
         msg = str(e).lower()
         if 'not found' in msg or '404' in msg or 'doesnotexist' in msg:
@@ -171,7 +181,12 @@ def run(argv=None):
     tags         = meta['tags']
 
     languages = '' if prob_type == 'lectura' else meta['languages']
-    output_limit = _max_output_size(problem_path) + 1000
+    # API expects memory_limit in KiB
+    memory_limit_kb = memory_limit * 1024
+    # overall_wall_time_limit must always be sent explicitly (OmegaUp bug:
+    # PHP checks memoryLimit but writes overallWallTimeLimit, producing "ms" if omitted)
+    overall_wall_time_limit = int(meta.get('overall_wall_time_limit') or 60000)
+    output_limit = max(_max_output_size(problem_path) + 1000, 10240)
 
     tag_list = [{'tagname': t['name'], 'public': bool(t.get('public', False))} for t in tags]
     if prob_type == 'lectura':
@@ -189,7 +204,8 @@ def run(argv=None):
         print(f"  Alias:          {alias}")
         print(f"  Title:          {title}")
         print(f"  Time limit:     {time_limit} ms")
-        print(f"  Memory:         {memory_limit} MB")
+        print(f"  Memory:         {memory_limit} MB ({memory_limit_kb} KiB sent to API)")
+        print(f"  Wall time:      {overall_wall_time_limit} ms")
         print(f"  Visibility:     {visibility}")
         print(f"  Type:           {prob_type}")
         print(f"  Validator:      {validator}")
@@ -237,18 +253,29 @@ def run(argv=None):
             title=title,
             source=source,
             time_limit=time_limit,
-            memory_limit=memory_limit,
+            memory_limit=memory_limit_kb,
             output_limit=output_limit,
+            overall_wall_time_limit=overall_wall_time_limit,
             visibility=visibility,
             validator=validator,
             languages=languages,
             problem_level=level,
             selected_tags=selected_tags,
-            files_={'contents': zip_buf},
+            files_={'problem_contents': zip_buf},
         )
         if not exists:
-            client.problem.create(**common)
-            print(f"\n✓ Created: https://omegaup.com/arena/problem/{alias}/")
+            try:
+                client.problem.create(**common)
+                print(f"\n✓ Created: https://omegaup.com/arena/problem/{alias}/")
+            except Exception as create_err:
+                # If creation fails because alias already exists, fall back to update
+                err_msg = str(create_err).lower()
+                if 'alias' in err_msg or 'exist' in err_msg or 'duplicate' in err_msg or 'taken' in err_msg:
+                    zip_buf.seek(0)
+                    client.problem.update(message=args.message, redirect=False, **common)
+                    print(f"\n✓ Updated (alias existed): https://omegaup.com/arena/problem/{alias}/")
+                else:
+                    raise
         else:
             client.problem.update(message=args.message, redirect=False, **common)
             print(f"\n✓ Updated: https://omegaup.com/arena/problem/{alias}/")
